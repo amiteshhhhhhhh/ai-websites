@@ -11,8 +11,12 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
     <motion.div
-      whileHover={{ y: -10 }}
-      className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500"
+      whileHover={{ 
+        y: -12,
+        boxShadow: "0 20px 40px rgba(0,0,0,0.08)"
+      }}
+      transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }}
+      className="group relative bg-white rounded-2xl overflow-hidden shadow-sm border border-black/5 transition-all duration-500"
     >
       <Link to={`/product/${product.id}`}>
         <div className="aspect-[4/5] overflow-hidden bg-brand-white relative">
