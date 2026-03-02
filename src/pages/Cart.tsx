@@ -5,7 +5,62 @@ import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck } from 'lucid
 import { useCart } from '../CartContext';
 
 export const Cart = () => {
-  const { cart, removeFromCart, updateQuantity, cartTotal } = useCart();
+  const { cart, removeFromCart, updateQuantity, cartTotal, clearCart } = useCart();
+
+  const [paymentMethod, setPaymentMethod] = React.useState<'card' | 'paypal' | 'apple'>('card');
+  const [cardDetails, setCardDetails] = React.useState({ number: '', expiry: '', cvc: '' });
+  const [isCheckingOut, setIsCheckingOut] = React.useState(false);
+  const [orderSuccess, setOrderSuccess] = React.useState<string | null>(null);
+
+  const handleCheckout = async () => {
+    if (paymentMethod === 'card' && (!cardDetails.number || !cardDetails.expiry || !cardDetails.cvc)) {
+      alert('Please fill in your card details');
+      return;
+    }
+    
+    setIsCheckingOut(true);
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          items: cart, 
+          total: cartTotal,
+          payment: {
+            method: paymentMethod,
+            details: paymentMethod === 'card' ? { last4: cardDetails.number.slice(-4) } : {}
+          }
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setOrderSuccess(data.orderId);
+        clearCart();
+      }
+    } catch (err) {
+      console.error('Checkout failed:', err);
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
+  if (orderSuccess) {
+    return (
+      <div className="pt-40 pb-20 px-6 text-center min-h-screen bg-brand-white">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md mx-auto">
+          <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl text-white">
+            <ShieldCheck size={40} />
+          </div>
+          <h1 className="text-5xl font-display font-black uppercase italic mb-4">Order Confirmed!</h1>
+          <p className="text-brand-black/50 mb-2">Your order <span className="text-brand-black font-bold">#{orderSuccess}</span> has been placed.</p>
+          <p className="text-brand-black/50 mb-10 text-sm">Check your email for tracking details.</p>
+          <Link to="/shop" className="inline-flex items-center gap-3 bg-brand-black text-white px-10 py-5 rounded-xl font-display font-black uppercase tracking-widest hover:bg-brand-red transition-all shadow-2xl">
+            Back to Shop <ArrowRight size={20} />
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (cart.length === 0) {
     return (
@@ -119,6 +174,55 @@ export const Cart = () => {
                 </div>
               </div>
 
+              <div className="pt-6 border-t border-white/10 mb-8">
+                <h3 className="font-display font-bold uppercase tracking-widest text-xs mb-6">Payment Method</h3>
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  {[
+                    { id: 'card', label: 'Card' },
+                    { id: 'paypal', label: 'PayPal' },
+                    { id: 'apple', label: 'Apple' }
+                  ].map((method) => (
+                    <button
+                      key={method.id}
+                      onClick={() => setPaymentMethod(method.id as any)}
+                      className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
+                        paymentMethod === method.id ? 'border-brand-red bg-brand-red text-white' : 'border-white/10 hover:border-white/30'
+                      }`}
+                    >
+                      {method.label}
+                    </button>
+                  ))}
+                </div>
+
+                {paymentMethod === 'card' && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 mb-6">
+                    <input
+                      type="text"
+                      placeholder="Card Number"
+                      value={cardDetails.number}
+                      onChange={(e) => setCardDetails({ ...cardDetails, number: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs focus:outline-none focus:border-brand-red transition-colors"
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <input
+                        type="text"
+                        placeholder="MM/YY"
+                        value={cardDetails.expiry}
+                        onChange={(e) => setCardDetails({ ...cardDetails, expiry: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs focus:outline-none focus:border-brand-red transition-colors"
+                      />
+                      <input
+                        type="text"
+                        placeholder="CVC"
+                        value={cardDetails.cvc}
+                        onChange={(e) => setCardDetails({ ...cardDetails, cvc: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs focus:outline-none focus:border-brand-red transition-colors"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
               <div className="pt-6 border-t border-white/10 mb-10">
                 <div className="flex justify-between items-end">
                   <span className="font-display font-bold uppercase tracking-widest text-sm">Total</span>
@@ -126,8 +230,12 @@ export const Cart = () => {
                 </div>
               </div>
 
-              <button className="w-full bg-white text-brand-black py-6 rounded-2xl font-display font-black uppercase tracking-widest text-lg hover:bg-brand-red hover:text-white transition-all duration-300 shadow-xl mb-6">
-                Checkout Now
+              <button 
+                onClick={handleCheckout}
+                disabled={isCheckingOut}
+                className="w-full bg-white text-brand-black py-6 rounded-2xl font-display font-black uppercase tracking-widest text-lg hover:bg-brand-red hover:text-white transition-all duration-300 shadow-xl mb-6 disabled:opacity-50"
+              >
+                {isCheckingOut ? 'Processing...' : 'Checkout Now'}
               </button>
 
               <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/30">

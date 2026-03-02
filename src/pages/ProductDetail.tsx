@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingBag, Heart, Share2, ChevronRight, ChevronLeft, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
-import { PRODUCTS, Product } from '../types';
+import { Product } from '../types';
 import { useCart } from '../CartContext';
 
 export const ProductDetail = () => {
@@ -14,16 +14,31 @@ export const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const found = PRODUCTS.find(p => p.id === id);
-    if (found) {
-      setProduct(found);
-      setSelectedColor(found.colors[0]);
-    } else {
-      navigate('/shop');
-    }
+    setLoading(true);
+    fetch(`/api/products/${id}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Product not found');
+        return res.json();
+      })
+      .then(data => {
+        setProduct(data);
+        setSelectedColor(data.colors[0]);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        navigate('/shop');
+      });
   }, [id, navigate]);
+
+  if (loading) return (
+    <div className="pt-40 pb-20 px-6 text-center min-h-screen bg-brand-white">
+      <p className="font-display font-black uppercase italic animate-pulse">Loading Gear...</p>
+    </div>
+  );
 
   if (!product) return null;
 

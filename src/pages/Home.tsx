@@ -1,22 +1,30 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform, useInView } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Play, Star, ChevronRight, ChevronLeft } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
-import { PRODUCTS } from '../types';
+import { Product } from '../types';
 
 export const Home = () => {
+  const [products, setProducts] = useState<Product[]>([]);
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
   });
 
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => setProducts(data))
+      .catch(err => console.error('Error fetching products:', err));
+  }, []);
+
   const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
   const scale = useTransform(scrollYProgress, [0, 1], [1, 1.2]);
 
-  const featuredProducts = PRODUCTS.filter(p => p.isBestSeller || p.isNew).slice(0, 4);
+  const featuredProducts = products.filter(p => p.isBestSeller || p.isNew).slice(0, 4);
 
   return (
     <div className="overflow-hidden">

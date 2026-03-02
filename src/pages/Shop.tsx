@@ -1,26 +1,34 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Filter, X, ChevronDown, Search } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
-import { PRODUCTS } from '../types';
+import { Product } from '../types';
 
 export const Shop = () => {
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => setProducts(data))
+      .catch(err => console.error('Error fetching products:', err));
+  }, []);
 
   const activeCategory = searchParams.get('cat') || 'All';
   const categories = ['All', 'Running', 'Basketball', 'Lifestyle', 'Training'];
 
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter(product => {
+    return products.filter(product => {
       const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            product.brand.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, searchQuery]);
+  }, [products, activeCategory, searchQuery]);
 
   const setCategory = (cat: string) => {
     if (cat === 'All') {
